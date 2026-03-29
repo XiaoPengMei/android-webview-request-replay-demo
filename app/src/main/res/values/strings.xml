@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Android WebView Replay Demo</string>
+    <string name="scope_title">Controlled local page only. One GET replay. No arbitrary-site sniffing.</string>
+    <string name="status_starting">Starting local server and loading WebView…</string>
+    <string name="load_local_page">Load local page</string>
+    <string name="replay_captured_get">Replay captured GET</string>
+    <string name="captured_request_label">Captured request metadata</string>
+    <string name="replay_response_label">Replay response</string>
+    <string name="no_request_captured">Waiting for the controlled /api/echo GET request…</string>
+    <string name="no_replay_yet">Replay has not run yet.</string>
+</resources>
