@@ -21,12 +21,13 @@ Expected result:
 
 ## Manual emulator/device QA
 
-1. Launch the debug app
+1. Launch the debug app (defaults to **Controlled replay demo** mode)
 2. Confirm the WebView shows the controlled local page from `127.0.0.1`
 3. Confirm one `/api/echo?...` GET request appears in the captured metadata panel
 4. Confirm the cookie snapshot is visible in that panel
 5. Tap **Replay captured GET**
 6. Confirm the replay response shows HTTP 200 plus echoed cookie and `X-Demo-Header`
+7. (Optional) Switch to **Generic URL login test** mode, enter a valid `http/https` URL, and confirm replay is disabled
 
 Pass condition: one controlled GET request can be captured and replayed without widening scope beyond the local page.
 

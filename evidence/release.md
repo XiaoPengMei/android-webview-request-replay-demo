@@ -12,6 +12,7 @@ Local-only release readiness for `android-webview-request-replay-demo`.
 - Captured one controlled request's URL, method, and headers via `shouldInterceptRequest`
 - Captured session cookies with `CookieManager`
 - Replayed the captured GET request with OkHttp using the captured cookie/header state
+- Defaulted the app to the controlled replay mode, with an optional generic URL mode where replay is disabled
 - Added README plus demand, scorecard, QA, and release evidence files
 
 ## Verification evidence

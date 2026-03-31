@@ -1,26 +1,29 @@
 # Android WebView request-replay demo
 
-这是一个**收敛范围的原生 Android 演示仓库**，只证明一个非常具体的调试路径：
+这是一个**收敛范围的原生 Android 演示仓库**，现在在单页面里提供两种明确分离的模式：
 
-> 在受控的 WebView 页面里捕获 1 条 GET 请求和当前会话 Cookie，再在应用内用 OkHttp 按同一会话头信息重放这条请求。
+1. **Controlled replay demo**：在受控的 WebView 页面里捕获 1 条 GET 请求和当前会话 Cookie，再在应用内用 OkHttp 按同一会话头信息重放这条请求。
+2. **Generic URL login test**：手动输入任意 `http/https` URL 并在 WebView 中加载，仅用于登录页兼容性测试，不启用请求重放。
 
 需求信号来自重复出现的 WebView 请求检查问题，例如 `react-native-webview/react-native-webview#3688`，以及相邻生态里的 `flutter_inappwebview#578`、`#2392`、`#2580`。
 
 ## 这个 demo 证明什么
 
-- 应用会在 `http://127.0.0.1:<port>/` 启动一个极小的内置 HTTP 服务
-- `WebView` 加载这个受控本地页面
-- 页面会主动发起一个同源 `GET /api/echo?...` 请求，并带上演示 Header
-- `WebViewClient.shouldInterceptRequest` 会捕获这条请求的 URL、Method 和请求头
-- `CookieManager` 会读取当前 WebView 会话的 Cookie 状态
-- 点击按钮后，应用会用 OkHttp 复用捕获到的 Cookie / 选定 Header 来重放这条 GET 请求
-- 应用界面会展示捕获到的请求元数据和重放响应内容
+- 受控模式下：应用会在 `http://127.0.0.1:<port>/` 启动一个极小的内置 HTTP 服务
+- 受控模式下：`WebView` 加载这个受控本地页面
+- 受控模式下：页面会主动发起一个同源 `GET /api/echo?...` 请求，并带上演示 Header
+- 受控模式下：`WebViewClient.shouldInterceptRequest` 会捕获这条请求的 URL、Method 和请求头
+- 受控模式下：`CookieManager` 会读取当前 WebView 会话的 Cookie 状态
+- 受控模式下：点击按钮后，应用会用 OkHttp 复用捕获到的 Cookie / 选定 Header 来重放这条 GET 请求
+- 通用 URL 模式下：用户可输入任意 `http/https` 地址并加载到 WebView（用于登录页测试）
+- 应用界面会展示受控模式的捕获元数据和重放响应；通用 URL 模式会显式关闭重放
 
 ## 范围约束
 
 这个仓库**故意只做很小的本地证明**。
 
 - 保留：1 个受控本地页面、1 条被捕获的 GET 请求、1 条应用内重放路径
+- 保留：1 个“通用 URL 登录测试”入口（仅加载页面，不重放请求）
 - 保留：从本地 WebView 会话读取 Cookie
 - 不做：任意网站抓包、MITM、中间代理、通用流量拦截、通用 POST body 捕获/重放
 - 不做：React Native、Expo、Flutter、远程后端服务、外部代理
@@ -58,12 +61,14 @@ evidence/
 
 ## 手动演示路径
 
-1. 安装并打开 debug app
+1. 安装并打开 debug app（默认是 **Controlled replay demo** 模式）
 2. 确认 WebView 加载了本地 `127.0.0.1` 页面
 3. 等待或手动触发受控 `GET /api/echo?...` 请求
 4. 确认界面展示了捕获到的 URL、Method、Headers 和 Cookie 快照
 5. 点击 **Replay captured GET**
 6. 确认重放结果里能看到 HTTP 200，以及回显的 Cookie 和演示 Header
+7. 切换到 **Generic URL login test** 模式，输入任意 `http/https` URL 后点击 **Load entered URL**
+8. 确认 WebView 能加载该 URL，且界面提示 replay 在该模式下禁用
 
 这条 happy path 已经写入 `evidence/qa/happy-path.md`。最新一次已执行的验证结果以 `evidence/release.md` 为准。
 
@@ -77,4 +82,4 @@ evidence/
 
 ## English summary
 
-This repo is a deliberately narrow native Android proof: load a controlled local page in WebView, capture one GET request plus session cookies, and replay that request in-app with OkHttp. It does **not** claim arbitrary-site sniffing, MITM behavior, or generic POST-body replay.
+This repo is a deliberately narrow native Android proof with two modes on one screen: (1) a controlled local replay demo (capture one GET plus session cookies, then replay in-app with OkHttp), and (2) a generic URL login test mode (load any http/https URL in WebView, replay disabled). It does **not** claim arbitrary-site sniffing, MITM behavior, or generic POST-body replay.

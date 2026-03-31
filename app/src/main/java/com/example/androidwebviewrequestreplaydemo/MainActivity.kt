@@ -1,7 +1,12 @@
 package com.example.androidwebviewrequestreplaydemo
 
+import android.net.Uri
 import android.os.Bundle
+import android.view.View
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
 import android.webkit.CookieManager
+import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
 import com.example.androidwebviewrequestreplaydemo.databinding.ActivityMainBinding
 import okhttp3.Headers
@@ -14,6 +19,11 @@ import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
 
+    private enum class TestMode {
+        CONTROLLED_REPLAY,
+        GENERIC_URL_LOGIN
+    }
+
     private lateinit var binding: ActivityMainBinding
     private val backgroundExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private val httpClient = OkHttpClient()
@@ -21,6 +31,7 @@ class MainActivity : AppCompatActivity() {
     private var localHttpServer: LocalHttpServer? = null
     private var baseUrl: String = ""
     private var capturedRequest: CapturedRequest? = null
+    private var currentMode: TestMode = TestMode.CONTROLLED_REPLAY
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,19 +44,66 @@ class MainActivity : AppCompatActivity() {
 
         configureWebView()
         bindActions()
+        binding.genericUrlEditText.setText(getString(R.string.default_generic_url))
+        applyModeUi(TestMode.CONTROLLED_REPLAY)
+        binding.modeRadioGroup.check(binding.controlledModeRadioButton.id)
         loadControlledPage()
     }
 
     private fun configureWebView() {
         binding.demoWebView.settings.javaScriptEnabled = true
+        binding.demoWebView.settings.domStorageEnabled = true
     }
 
     private fun bindActions() {
         binding.loadButton.setOnClickListener { loadControlledPage() }
         binding.replayButton.setOnClickListener { replayCapturedRequest() }
+        binding.loadGenericUrlButton.setOnClickListener { loadGenericUrl() }
+        binding.modeRadioGroup.setOnCheckedChangeListener { _, checkedId ->
+            val selectedMode = if (checkedId == binding.genericModeRadioButton.id) {
+                TestMode.GENERIC_URL_LOGIN
+            } else {
+                TestMode.CONTROLLED_REPLAY
+            }
+            onModeSelected(selectedMode)
+        }
+    }
+
+    private fun onModeSelected(mode: TestMode) {
+        if (currentMode == mode) {
+            return
+        }
+
+        applyModeUi(mode)
+        if (mode == TestMode.CONTROLLED_REPLAY) {
+            loadControlledPage()
+        } else {
+            binding.demoWebView.stopLoading()
+            capturedRequest = null
+            binding.replayButton.isEnabled = false
+            binding.replayResponseTextView.text = getString(R.string.replay_disabled_generic_mode)
+            binding.capturedRequestTextView.text = getString(R.string.captured_not_available_generic_mode)
+            binding.statusTextView.text = getString(R.string.status_generic_mode_idle)
+            binding.demoWebView.webViewClient = genericModeWebViewClient()
+        }
+    }
+
+    private fun applyModeUi(mode: TestMode) {
+        currentMode = mode
+        val controlledVisible = mode == TestMode.CONTROLLED_REPLAY
+        binding.controlledActionsContainer.visibility = if (controlledVisible) View.VISIBLE else View.GONE
+        binding.genericUrlContainer.visibility = if (controlledVisible) View.GONE else View.VISIBLE
+        binding.capturedRequestLabelTextView.visibility = if (controlledVisible) View.VISIBLE else View.GONE
+        binding.capturedRequestContainer.visibility = if (controlledVisible) View.VISIBLE else View.GONE
+        binding.replayResponseLabelTextView.visibility = if (controlledVisible) View.VISIBLE else View.GONE
+        binding.replayResponseContainer.visibility = if (controlledVisible) View.VISIBLE else View.GONE
     }
 
     private fun loadControlledPage() {
+        if (currentMode != TestMode.CONTROLLED_REPLAY) {
+            return
+        }
+
         val server = localHttpServer
         if (server == null) {
             localHttpServer = LocalHttpServer()
@@ -53,17 +111,21 @@ class MainActivity : AppCompatActivity() {
 
         val activeServer = localHttpServer ?: return
         baseUrl = activeServer.start()
+        val controlledBaseUrl = baseUrl
         capturedRequest = null
-        binding.statusTextView.text = "Loading controlled page from $baseUrl"
-        binding.capturedRequestTextView.text = "Waiting for /api/echo GET metadata from the controlled page..."
+        binding.statusTextView.text = getString(R.string.status_loading_controlled_page, baseUrl)
+        binding.capturedRequestTextView.text = getString(R.string.no_request_captured)
         binding.replayButton.isEnabled = false
         binding.replayResponseTextView.text = getString(R.string.no_replay_yet)
         binding.demoWebView.webViewClient = CaptureWebViewClient(
-            baseUrl = baseUrl,
+            baseUrl = controlledBaseUrl,
             onRequestCaptured = { pending ->
                 runOnUiThread {
+                    if (currentMode != TestMode.CONTROLLED_REPLAY || !pending.url.startsWith(controlledBaseUrl)) {
+                        return@runOnUiThread
+                    }
                     val cookieHeader = CookieManager.getInstance().getCookie(pending.url)
-                        ?: CookieManager.getInstance().getCookie(baseUrl)
+                        ?: CookieManager.getInstance().getCookie(controlledBaseUrl)
                     capturedRequest = CapturedRequest(
                         url = pending.url,
                         method = pending.method,
@@ -74,47 +136,129 @@ class MainActivity : AppCompatActivity() {
                     val replayable = pending.method.equals("GET", ignoreCase = true)
                     binding.replayButton.isEnabled = replayable
                     binding.statusTextView.text = if (replayable) {
-                        "Captured one controlled GET request. Replay is ready."
+                        getString(R.string.status_controlled_replay_ready)
                     } else {
-                        "Captured a request, but replay stays GET-only in this demo."
+                        getString(R.string.status_controlled_get_only)
                     }
                 }
             },
             onPageStarted = { pageUrl ->
                 runOnUiThread {
-                    binding.statusTextView.text = "WebView loading $pageUrl"
+                    if (currentMode != TestMode.CONTROLLED_REPLAY || !pageUrl.startsWith(controlledBaseUrl)) {
+                        return@runOnUiThread
+                    }
+                    binding.statusTextView.text = getString(R.string.status_webview_loading, pageUrl)
                 }
             },
             onPageFinished = { pageUrl ->
                 runOnUiThread {
+                    if (currentMode != TestMode.CONTROLLED_REPLAY || !pageUrl.startsWith(controlledBaseUrl)) {
+                        return@runOnUiThread
+                    }
                     val cookies = CookieManager.getInstance().getCookie(pageUrl)
                     if (capturedRequest == null && !cookies.isNullOrBlank()) {
                         binding.capturedRequestTextView.text = buildString {
-                            appendLine("Cookies captured for the controlled session:")
+                            appendLine(getString(R.string.controlled_session_cookie_label))
                             appendLine(cookies)
                             appendLine()
-                            append("Waiting for /api/echo GET metadata...")
+                            append(getString(R.string.controlled_waiting_for_metadata))
                         }
                     }
                 }
             }
         )
-        binding.demoWebView.loadUrl(baseUrl)
+        binding.demoWebView.loadUrl(controlledBaseUrl)
+    }
+
+    private fun loadGenericUrl() {
+        if (currentMode != TestMode.GENERIC_URL_LOGIN) {
+            return
+        }
+
+        val inputUrl = binding.genericUrlEditText.text?.toString()?.trim().orEmpty()
+        if (inputUrl.isEmpty()) {
+            binding.statusTextView.text = getString(R.string.error_generic_url_empty)
+            return
+        }
+        if (!isSupportedHttpUrl(inputUrl)) {
+            binding.statusTextView.text = getString(R.string.error_generic_url_invalid_scheme)
+            return
+        }
+
+        capturedRequest = null
+        binding.replayButton.isEnabled = false
+        binding.replayResponseTextView.text = getString(R.string.replay_disabled_generic_mode)
+        binding.capturedRequestTextView.text = getString(R.string.captured_not_available_generic_mode)
+        binding.statusTextView.text = getString(R.string.status_loading_generic_url, inputUrl)
+        binding.demoWebView.webViewClient = genericModeWebViewClient()
+        binding.demoWebView.loadUrl(inputUrl)
+    }
+
+    private fun isSupportedHttpUrl(rawUrl: String): Boolean {
+        val uri = Uri.parse(rawUrl)
+        val scheme = uri.scheme?.lowercase(Locale.US)
+        val host = uri.host.orEmpty()
+        return (scheme == "http" || scheme == "https") && host.isNotBlank()
+    }
+
+    private fun genericModeWebViewClient(): WebViewClient = object : WebViewClient() {
+        override fun onPageStarted(view: android.webkit.WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+            if (currentMode == TestMode.GENERIC_URL_LOGIN && !url.isNullOrBlank()) {
+                binding.statusTextView.text = getString(R.string.status_loading_generic_url, url)
+            }
+            super.onPageStarted(view, url, favicon)
+        }
+
+        override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
+            if (currentMode == TestMode.GENERIC_URL_LOGIN && !url.isNullOrBlank()) {
+                binding.statusTextView.text = getString(R.string.status_generic_url_loaded, url)
+            }
+            super.onPageFinished(view, url)
+        }
+
+        override fun onReceivedError(
+            view: android.webkit.WebView?,
+            request: WebResourceRequest?,
+            error: WebResourceError?
+        ) {
+            if (
+                currentMode == TestMode.GENERIC_URL_LOGIN &&
+                request?.isForMainFrame == true
+            ) {
+                val failingUrl = request.url?.toString().orEmpty()
+                val errorText = error?.description?.toString().orEmpty()
+                binding.statusTextView.text = getString(
+                    R.string.status_generic_url_failed,
+                    failingUrl,
+                    errorText
+                )
+            }
+            super.onReceivedError(view, request, error)
+        }
     }
 
     private fun replayCapturedRequest() {
-        val requestToReplay = capturedRequest
-        if (requestToReplay == null) {
-            binding.statusTextView.text = "No captured request is available yet."
-            return
-        }
-        if (!requestToReplay.method.equals("GET", ignoreCase = true)) {
-            binding.statusTextView.text = "This demo only replays captured GET requests."
+        if (currentMode != TestMode.CONTROLLED_REPLAY) {
+            binding.statusTextView.text = getString(R.string.replay_disabled_generic_mode)
             return
         }
 
-        binding.statusTextView.text = "Replaying ${requestToReplay.method.uppercase(Locale.US)} ${requestToReplay.url}"
-        binding.replayResponseTextView.text = "Running OkHttp replay..."
+        val requestToReplay = capturedRequest
+        if (requestToReplay == null) {
+            binding.statusTextView.text = getString(R.string.status_no_captured_request)
+            return
+        }
+        if (!requestToReplay.method.equals("GET", ignoreCase = true)) {
+            binding.statusTextView.text = getString(R.string.status_controlled_get_only)
+            return
+        }
+
+        binding.statusTextView.text = getString(
+            R.string.status_replaying_request,
+            requestToReplay.method.uppercase(Locale.US),
+            requestToReplay.url
+        )
+        binding.replayResponseTextView.text = getString(R.string.status_running_replay)
 
         backgroundExecutor.execute {
             try {
@@ -128,19 +272,22 @@ class MainActivity : AppCompatActivity() {
                     val responseBody = response.body?.string().orEmpty()
                     runOnUiThread {
                         binding.replayResponseTextView.text = buildString {
-                            appendLine("Status: ${response.code} ${response.message}")
-                            appendLine("Used Cookie header: ${requestToReplay.cookieHeader.orEmpty()}")
+                            appendLine(getString(R.string.replay_response_status, response.code, response.message))
+                            appendLine(getString(R.string.replay_response_cookie, requestToReplay.cookieHeader.orEmpty()))
                             appendLine()
-                            appendLine("Body:")
+                            appendLine(getString(R.string.replay_response_body_label))
                             append(responseBody)
                         }
-                        binding.statusTextView.text = "Replay completed with HTTP ${response.code}."
+                        binding.statusTextView.text = getString(R.string.status_replay_completed, response.code)
                     }
                 }
             } catch (error: IOException) {
                 runOnUiThread {
-                    binding.replayResponseTextView.text = "Replay failed: ${error.message.orEmpty()}"
-                    binding.statusTextView.text = "Replay failed."
+                    binding.replayResponseTextView.text = getString(
+                        R.string.status_replay_failed_detail,
+                        error.message.orEmpty()
+                    )
+                    binding.statusTextView.text = getString(R.string.status_replay_failed)
                 }
             }
         }

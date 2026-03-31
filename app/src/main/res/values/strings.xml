@@ -1,12 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Android WebView Replay Demo</string>
-    <string name="scope_title">Controlled local page only. One GET replay. No arbitrary-site sniffing.</string>
+    <string name="scope_title">Two modes: controlled local replay demo + generic URL login test (no replay).</string>
     <string name="status_starting">Starting local server and loading WebView…</string>
+    <string name="mode_label">Mode</string>
+    <string name="mode_controlled">Controlled replay demo</string>
+    <string name="mode_generic">Generic URL login test</string>
     <string name="load_local_page">Load local page</string>
+    <string name="generic_url_hint">https://waimaie.meituan.com/new_fe/login_gw#/login</string>
+    <string name="default_generic_url">https://waimaie.meituan.com/new_fe/login_gw#/login</string>
+    <string name="load_generic_url">Load entered URL</string>
     <string name="replay_captured_get">Replay captured GET</string>
     <string name="captured_request_label">Captured request metadata</string>
     <string name="replay_response_label">Replay response</string>
     <string name="no_request_captured">Waiting for the controlled /api/echo GET request…</string>
     <string name="no_replay_yet">Replay has not run yet.</string>
+    <string name="status_loading_controlled_page">Loading controlled page from %1$s</string>
+    <string name="status_controlled_replay_ready">Captured one controlled GET request. Replay is ready.</string>
+    <string name="status_controlled_get_only">Captured a request, but replay stays GET-only in this demo.</string>
+    <string name="status_webview_loading">WebView loading %1$s</string>
+    <string name="status_generic_mode_idle">Generic URL mode: enter an http/https URL and tap Load entered URL.</string>
+    <string name="status_loading_generic_url">Loading generic URL: %1$s</string>
+    <string name="status_generic_url_loaded">Loaded generic URL: %1$s</string>
+    <string name="status_generic_url_failed">Failed to load %1$s: %2$s</string>
+    <string name="status_no_captured_request">No captured request is available yet.</string>
+    <string name="status_replaying_request">Replaying %1$s %2$s</string>
+    <string name="status_running_replay">Running OkHttp replay...</string>
+    <string name="status_replay_completed">Replay completed with HTTP %1$d.</string>
+    <string name="status_replay_failed">Replay failed.</string>
+    <string name="status_replay_failed_detail">Replay failed: %1$s</string>
+    <string name="error_generic_url_empty">Please enter a URL first.</string>
+    <string name="error_generic_url_invalid_scheme">Only http:// or https:// URLs are allowed in generic mode.</string>
+    <string name="captured_not_available_generic_mode">Captured request metadata is available only in controlled replay mode.</string>
+    <string name="replay_disabled_generic_mode">Replay is disabled in generic URL mode.</string>
+    <string name="controlled_session_cookie_label">Cookies captured for the controlled session:</string>
+    <string name="controlled_waiting_for_metadata">Waiting for /api/echo GET metadata...</string>
+    <string name="replay_response_status">Status: %1$d %2$s</string>
+    <string name="replay_response_cookie">Used Cookie header: %1$s</string>
+    <string name="replay_response_body_label">Body:</string>
 </resources>

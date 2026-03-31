@@ -19,7 +19,39 @@
         android:layout_marginTop="6dp"
         android:text="@string/status_starting" />
 
+    <TextView
+        android:id="@+id/modeLabelTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="@string/mode_label"
+        android:textStyle="bold" />
+
+    <RadioGroup
+        android:id="@+id/modeRadioGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:orientation="horizontal">
+
+        <RadioButton
+            android:id="@+id/controlledModeRadioButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/mode_controlled" />
+
+        <RadioButton
+            android:id="@+id/genericModeRadioButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:checked="true"
+            android:text="@string/mode_generic" />
+    </RadioGroup>
+
     <LinearLayout
+        android:id="@+id/controlledActionsContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
@@ -42,7 +74,33 @@
             android:text="@string/replay_captured_get" />
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/genericUrlContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <EditText
+            android:id="@+id/genericUrlEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/generic_url_hint"
+            android:importantForAutofill="no"
+            android:inputType="textUri"
+            android:maxLines="1" />
+
+        <Button
+            android:id="@+id/loadGenericUrlButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/load_generic_url" />
+    </LinearLayout>
+
     <TextView
+        android:id="@+id/capturedRequestLabelTextView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
@@ -50,6 +108,7 @@
         android:textStyle="bold" />
 
     <ScrollView
+        android:id="@+id/capturedRequestContainer"
         android:layout_width="match_parent"
         android:layout_height="140dp"
         android:background="#FFF3F4F6"
@@ -67,6 +126,7 @@
     </ScrollView>
 
     <TextView
+        android:id="@+id/replayResponseLabelTextView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
@@ -74,6 +134,7 @@
         android:textStyle="bold" />
 
     <ScrollView
+        android:id="@+id/replayResponseContainer"
         android:layout_width="match_parent"
         android:layout_height="140dp"
         android:background="#FFF3F4F6"
